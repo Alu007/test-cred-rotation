@@ -15,7 +15,7 @@ jobs:
 
     env:
       AWS_USERNAME: terraform
-      ROTATION_DAYS: "60"
+      ROTATION_DAYS: "0"
       GITHUB_REPO_FULLNAME: ${{ github.repository }}
 
     steps:
