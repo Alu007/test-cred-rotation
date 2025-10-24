@@ -1,8 +1,7 @@
 name: Rotate AWS Keys
 
 on:
-  push:
-  # workflow_dispatch: {}
+  workflow_dispatch: {}
   # schedule:
   #   - cron: "0 8 * * 0"  # Every Sunday at 08:00 UTC
 
@@ -29,8 +28,6 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          # IMPORTANT: Change this to use a Personal Access Token (PAT)
-          # The PAT must have 'repo' scope to update repository secrets
           GITHUB_TOKEN: ${{ secrets.GH_PAT_ROTATE_KEYS }}
         run: |
           python ./cred-rotation-logic.py \
