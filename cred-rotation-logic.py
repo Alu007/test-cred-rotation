@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 import sys
 import os
@@ -120,13 +121,17 @@ def rotateawskey(aws_username: str, github_token: str, github_repo_fullname: str
             return
 
         logger.info("Key older than %d days. Proceeding with self-rotation.", rotation_days)
-
-        # SELF-ROTATION SAFETY: If we have 2 keys, we need to be careful about which one to delete
+        # If we have 2 keys, always delete the oldest to make room
         if len(metadata_sorted) == 2:
-            # Always delete the oldest key (not necessarily the one we're using)
-            logger.info("Two keys present. Will delete oldest key: %s after creating new one", oldest_id)
+           key_to_delete = oldest_id
+           logger.info("Two keys present. Deleting oldest key %s to make room for new one", key_to_delete)
+            
+            # Delete the old key FIRST to make room (AWS allows max 2 keys)
+           logger.info("Deleting key: %s", key_to_delete)
+           client.delete_access_key(UserName=aws_username, AccessKeyId=key_to_delete)
+           logger.info("Key deleted successfully: %s", key_to_delete)
         
-        # Create a new key FIRST (before deleting anything)
+        # Now create a new key (we have room after deletion)
         logger.info("Creating new access key for user: %s", aws_username)
         create_resp = client.create_access_key(UserName=aws_username)
         new_access_key_id = create_resp["AccessKey"]["AccessKeyId"]
@@ -139,15 +144,8 @@ def rotateawskey(aws_username: str, github_token: str, github_repo_fullname: str
         put_repo_secret(owner, repo, github_token, "AWS_SECRET_ACCESS_KEY", new_secret_key)
         logger.info("GitHub secrets updated successfully")
 
-        # Now it's safe to delete the old key
-        # Delete the oldest key to free up space (AWS allows max 2 keys per user)
-        if len(metadata_sorted) == 2:
-            logger.info("Deleting oldest key: %s", oldest_id)
-            client.delete_access_key(UserName=aws_username, AccessKeyId=oldest_id)
-            logger.info("Old key deleted: %s", oldest_id)
-
         logger.info("Self-rotation complete! Next workflow run will use the new credentials.")
-        logger.info("Old key: %s -> New key: %s", oldest_id, new_access_key_id)
+        logger.info("Old key deleted: %s -> New key created: %s", key_to_delete if len(metadata_sorted) == 2 else "N/A", new_access_key_id)
 
     except client.exceptions.NoSuchEntityException:
         logger.error("The IAM user %s does not exist.", aws_username)
